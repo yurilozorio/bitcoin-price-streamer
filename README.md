@@ -52,7 +52,7 @@ The following environment variables can be configured:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/yurilozorio/bitcoin-price-streamer.git
 cd bitcoin-price-streamer
 ```
 
