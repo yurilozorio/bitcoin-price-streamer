@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Price Streamer - Real-time Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 2.5em;
+            color: #f7931a;
+        }
+
+        .logo-text h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+            background: linear-gradient(45deg, #f7931a, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-connected {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .status-disconnected {
+            background: #ff4757;
+            box-shadow: 0 0 10px #ff4757;
+        }
+
+        .status-connecting {
+            background: #ffa502;
+            box-shadow: 0 0 10px #ffa502;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .price-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .current-price {
+            font-size: 4em;
+            font-weight: 700;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .price-change {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .price-change.positive {
+            color: #00ff88;
+        }
+
+        .price-change.negative {
+            color: #ff4757;
+        }
+
+        .price-details {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .detail-item {
+            text-align: center;
+        }
+
+        .detail-label {
+            color: #a0a0a0;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 400px; /* Fixed height to prevent massive scroll */
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .stats-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 400px; /* Match chart container height */
+            overflow-y: auto;
+        }
+
+        .stats-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.danger {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn.danger:hover {
+            box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn.success {
+            background: linear-gradient(45deg, #00ff88, #00d4aa);
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn.success:hover {
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .recent-updates {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 300px; /* Fixed height */
+        }
+
+        .updates-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .updates-list {
+            max-height: 220px; /* Reduced height */
+            overflow-y: auto;
+        }
+
+        .update-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid #00ff88;
+            transition: all 0.3s ease;
+        }
+
+        .update-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .update-price {
+            font-weight: 600;
+            color: #00ff88;
+            font-size: 1.1em;
+        }
+
+        .update-time {
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #a0a0a0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .current-price {
+                font-size: 2.5em;
+            }
+            
+            .price-details {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">₿</div>
+                <div class="logo-text">
+                    <h1>Bitcoin Price Streamer</h1>
+                    <p>Real-time BTC/USD price monitoring</p>
+                </div>
+            </div>
+            <div class="connection-status" id="connectionStatus">
+                <div class="status-indicator status-connecting" id="statusIndicator"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="price-card">
+            <div class="current-price" id="currentPrice">$0.00</div>
+            <div class="price-change" id="priceChange">Loading...</div>
+            <div class="price-details">
+                <div class="detail-item">
+                    <div class="detail-label">Symbol</div>
+                    <div class="detail-value" id="symbol">BTC</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Last Update</div>
+                    <div class="detail-value" id="lastUpdate">--</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Connection</div>
+                    <div class="detail-value" id="connectionType">SSE</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn success" onclick="connect()">Connect</button>
+            <button class="btn danger" onclick="disconnect()">Disconnect</button>
+            <button class="btn" onclick="clearHistory()">Clear History</button>
+            <button class="btn" onclick="toggleConnectionType()">Switch to WebSocket</button>
+            <button class="btn" onclick="retryConnection()">Retry Connection</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="chart-container">
+                <div class="chart-title">Price Chart (Last 30 Updates)</div>
+                <canvas id="priceChart"></canvas>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stats-title">Statistics</div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Updates</span>
+                    <span class="stat-value" id="totalUpdates">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Highest Price</span>
+                    <span class="stat-value" id="highestPrice">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Lowest Price</span>
+                    <span class="stat-value" id="lowestPrice">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Average Price</span>
+                    <span class="stat-value" id="averagePrice">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Price Change (24h)</span>
+                    <span class="stat-value" id="priceChange24h">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Update Frequency</span>
+                    <span class="stat-value" id="updateFrequency">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="recent-updates">
+            <div class="updates-title">Recent Price Updates</div>
+            <div class="updates-list" id="updatesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Waiting for price updates...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let websocket = null;
+        let isWebSocket = false;
+        let lastTimestamp = null;
+        let priceHistory = [];
+        let chart = null;
+        let lastPrice = 0;
+        let updateCount = 0;
+        let startTime = Date.now();
+        let lastUpdateTime = 0;
+        let chartUpdateThrottle = 0; // Throttle chart updates for performance
+
+        // Initialize Chart.js
+        function initializeChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Bitcoin Price (USD)',
+                        data: [],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#00ff88',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0 // Disable animations
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'second',
+                                displayFormats: {
+                                    second: 'HH:mm:ss'
+                                }
+                            },
+                            ticks: {
+                                color: '#a0a0a0',
+                                maxTicksLimit: 8,
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                color: '#a0a0a0',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                },
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    elements: {
+                        point: {
+                            radius: 0, // Hide points by default
+                            hoverRadius: 5
+                        }
+                    }
+                }
+            });
+        }
+
+        function connect() {
+            disconnect();
+            
+            if (isWebSocket) {
+                connectWebSocket();
+            } else {
+                connectSSE();
+            }
+        }
+
+        function connectSSE() {
+            const url = lastTimestamp ? 
+                '/api/price/stream?since=' + Math.floor(new Date(lastTimestamp).getTime() / 1000) : 
+                '/api/price/stream';
+            
+            console.log('Connecting to SSE:', url);
+            eventSource = new EventSource(url);
+            updateConnectionStatus('Connecting...', 'connecting');
+            
+            // Add connection timeout
+            const connectionTimeout = setTimeout(() => {
+                if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
+                    console.error('SSE connection timeout');
+                    updateConnectionStatus('Connection Timeout', 'disconnected');
+                    eventSource.close();
+                    eventSource = null;
+                }
+            }, 10000); // 10 second timeout
+            
+            eventSource.onopen = function(event) {
+                console.log('SSE connection opened');
+                clearTimeout(connectionTimeout);
+                updateConnectionStatus('Connected (SSE)', 'connected');
+            };
+            
+            eventSource.addEventListener('price', function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('SSE price update received:', data);
+                    processPriceUpdate(data);
+                } catch (e) {
+                    console.error('Error parsing SSE message:', e);
+                }
+            });
+            
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('SSE message received:', data);
+                    processPriceUpdate(data);
+                } catch (e) {
+                    console.error('Error parsing SSE message:', e);
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                console.error('SSE connection error:', event);
+                clearTimeout(connectionTimeout);
+                updateConnectionStatus('Connection Error', 'disconnected');
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            };
+        }
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+            
+            websocket = new WebSocket(wsUrl);
+            updateConnectionStatus('Connecting...', 'connecting');
+            
+            websocket.onopen = function() {
+                updateConnectionStatus('Connected (WebSocket)', 'connected');
+            };
+            
+            websocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    processPriceUpdate(data);
+                } catch (e) {
+                    console.error('Error parsing WebSocket message:', e);
+                }
+            };
+            
+            websocket.onclose = function() {
+                updateConnectionStatus('Disconnected', 'disconnected');
+                websocket = null;
+            };
+            
+            websocket.onerror = function() {
+                updateConnectionStatus('Connection Error', 'disconnected');
+            };
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+            updateConnectionStatus('Disconnected', 'disconnected');
+        }
+
+        function processPriceUpdate(data) {
+            const currentTime = new Date();
+            const price = data.price;
+            
+            // Update current price display
+            document.getElementById('currentPrice').textContent = '$' + price.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            // Calculate price change
+            if (lastPrice > 0) {
+                const change = price - lastPrice;
+                const changePercent = (change / lastPrice) * 100;
+                const changeElement = document.getElementById('priceChange');
+                
+                if (change > 0) {
+                    changeElement.textContent = `+$${change.toFixed(2)} (+${changePercent.toFixed(2)}%)`;
+                    changeElement.className = 'price-change positive';
+                } else if (change < 0) {
+                    changeElement.textContent = `$${change.toFixed(2)} (${changePercent.toFixed(2)}%)`;
+                    changeElement.className = 'price-change negative';
+                } else {
+                    changeElement.textContent = 'No change';
+                    changeElement.className = 'price-change';
+                }
+            }
+            
+            // Update details
+            document.getElementById('symbol').textContent = data.symbol || 'BTC';
+            document.getElementById('lastUpdate').textContent = currentTime.toLocaleTimeString();
+            document.getElementById('connectionType').textContent = isWebSocket ? 'WebSocket' : 'SSE';
+            
+            // Add to history (limit to 30 points for better performance)
+            priceHistory.push({
+                time: currentTime,
+                price: price
+            });
+            
+            // Keep only last 30 updates for better performance
+            if (priceHistory.length > 30) {
+                priceHistory.shift();
+            }
+            
+            // Throttle chart updates (update every 3rd data point)
+            chartUpdateThrottle++;
+            if (chartUpdateThrottle % 3 === 0 || priceHistory.length <= 5) {
+                updateChart();
+            }
+            
+            // Update statistics (throttle to every 5th update)
+            if (chartUpdateThrottle % 5 === 0) {
+                updateStatistics();
+            }
+            
+            // Add to recent updates list (limit to 10 items)
+            addToUpdatesList(data, currentTime);
+            
+            // Update tracking variables
+            lastPrice = price;
+            lastTimestamp = data.timestamp;
+            updateCount++;
+            lastUpdateTime = currentTime.getTime();
+        }
+
+        function updateChart() {
+            if (!chart || priceHistory.length === 0) return;
+            
+            // Format data for Chart.js
+            const labels = priceHistory.map(item => item.time);
+            const data = priceHistory.map(item => item.price);
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update('none');
+        }
+
+        function updateStatistics() {
+            if (priceHistory.length === 0) return;
+            
+            const prices = priceHistory.map(item => item.price);
+            const highest = Math.max(...prices);
+            const lowest = Math.min(...prices);
+            const average = prices.reduce((a, b) => a + b, 0) / prices.length;
+            
+            document.getElementById('totalUpdates').textContent = updateCount;
+            document.getElementById('highestPrice').textContent = '$' + highest.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            document.getElementById('lowestPrice').textContent = '$' + lowest.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            document.getElementById('averagePrice').textContent = '$' + average.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            // Calculate update frequency
+            if (updateCount > 1) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const frequency = (updateCount / elapsed).toFixed(2);
+                document.getElementById('updateFrequency').textContent = frequency + ' updates/sec';
+            }
+        }
+
+        function addToUpdatesList(data, timestamp) {
+            const updatesList = document.getElementById('updatesList');
+            
+            // Remove loading message if present
+            const loading = updatesList.querySelector('.loading');
+            if (loading) {
+                loading.remove();
+            }
+            
+            const updateItem = document.createElement('div');
+            updateItem.className = 'update-item';
+            
+            const price = data.price.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            updateItem.innerHTML = `
+                <div class="update-price">$${price}</div>
+                <div class="update-time">${timestamp.toLocaleTimeString()}</div>
+            `;
+            
+            updatesList.insertBefore(updateItem, updatesList.firstChild);
+            
+            // Keep only last 10 updates for better performance
+            const items = updatesList.querySelectorAll('.update-item');
+            if (items.length > 10) {
+                items[items.length - 1].remove();
+            }
+        }
+
+        function updateConnectionStatus(message, status) {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            // Add connection state info for debugging
+            let stateInfo = '';
+            if (eventSource) {
+                switch(eventSource.readyState) {
+                    case EventSource.CONNECTING:
+                        stateInfo = ' (Connecting)';
+                        break;
+                    case EventSource.OPEN:
+                        stateInfo = ' (Open)';
+                        break;
+                    case EventSource.CLOSED:
+                        stateInfo = ' (Closed)';
+                        break;
+                }
+            }
+            
+            statusText.textContent = message + stateInfo;
+            statusIndicator.className = 'status-indicator status-' + status;
+            
+            console.log('Connection status updated:', message, status, stateInfo);
+        }
+
+        function clearHistory() {
+            priceHistory = [];
+            updateCount = 0;
+            startTime = Date.now();
+            chartUpdateThrottle = 0; // Reset throttle counter
+            
+            if (chart) {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update('none');
+            }
+            
+            document.getElementById('updatesList').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>History cleared...</div>
+                </div>
+            `;
+            
+            updateStatistics();
+        }
+
+        function toggleConnectionType() {
+            isWebSocket = !isWebSocket;
+            const button = event.target;
+            button.textContent = isWebSocket ? 'Switch to SSE' : 'Switch to WebSocket';
+            
+            if (eventSource || websocket) {
+                connect();
+            }
+        }
+
+        function testConnection() {
+            console.log('Testing connection...');
+            
+            // Test if we can reach the server
+            fetch('/api/price/current')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Server is reachable:', data);
+                    updateConnectionStatus('Server reachable, testing SSE...', 'connecting');
+                    
+                    // Now try SSE
+                    if (!isWebSocket) {
+                        connectSSE();
+                    } else {
+                        connectWebSocket();
+                    }
+                })
+                .catch(error => {
+                    console.error('Server not reachable:', error);
+                    updateConnectionStatus('Server not reachable', 'disconnected');
+                });
+        }
+
+        function retryConnection() {
+            console.log('Retrying connection...');
+            updateConnectionStatus('Retrying...', 'connecting');
+            disconnect();
+            setTimeout(() => {
+                testConnection();
+            }, 1000);
+        }
+
+
+        // Initialize on page load
+        window.onload = function() {
+            // Small delay to ensure canvas is rendered
+            setTimeout(() => {
+                initializeChart();
+                
+                // Try SSE first, fallback to WebSocket if needed
+                connect();
+                
+                // Add fallback: if SSE doesn't work after 15 seconds, try WebSocket
+                setTimeout(() => {
+                    if (!eventSource || eventSource.readyState !== EventSource.OPEN) {
+                        console.log('SSE failed, trying WebSocket fallback');
+                        isWebSocket = true;
+                        connect();
+                    }
+                }, 15000);
+            }, 100);
+        };
+        
+        // Reconnect on page visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && !eventSource && !websocket) {
+                connect();
+            }
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            disconnect();
+        });
+    </script>
+</body>
+</html> 
