@@ -177,3 +177,7 @@ func (ps *PriceService) Unsubscribe(clientChan chan models.PriceUpdate) {
 func (ps *PriceService) GetStorage() *storage.PriceStorage {
 	return ps.storage
 }
+
+func (ps *PriceService) SetAPIURL(url string) {
+	ps.apiURL = url
+}

@@ -3,11 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"bitcoin-price-streamer/internal/models"
 	"bitcoin-price-streamer/internal/service"
+	"bitcoin-price-streamer/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -51,7 +53,8 @@ func (h *Handlers) SetupRoutes(router *gin.Engine) {
 
 // handleIndex serves the main HTML page
 func (h *Handlers) handleIndex(c *gin.Context) {
-	c.File("./static/index.html")
+	staticPath := utils.GetEnvString("STATIC_PATH", "./static")
+	c.File(filepath.Join(staticPath, "index.html"))
 }
 
 // handleSSE handles Server-Sent Events for real-time price streaming
@@ -87,9 +90,6 @@ func (h *Handlers) handleSSE(c *gin.Context) {
 	clientChan := h.priceService.Subscribe()
 	defer h.priceService.Unsubscribe(clientChan)
 
-	// Create a channel to detect client disconnection
-	notify := c.Writer.CloseNotify()
-
 	for {
 		select {
 		case price := <-clientChan:
@@ -100,9 +100,6 @@ func (h *Handlers) handleSSE(c *gin.Context) {
 			}
 			c.SSEvent("price", string(data))
 			c.Writer.Flush()
-		case <-notify:
-			h.logger.Info("Client disconnected from SSE")
-			return
 		case <-c.Request.Context().Done():
 			h.logger.Info("Request context cancelled")
 			return

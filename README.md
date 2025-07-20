@@ -15,6 +15,7 @@ A real-time Bitcoin price streaming service built in Go that fetches BTC/USD pri
 - **Docker Support**: Containerized application for easy deployment
 - **WebSocket Support**: Alternative real-time communication protocol
 - **REST API**: Additional endpoints for current price and price history
+- **Comprehensive Testing**: Unit tests and integration tests
 
 ## API Endpoints
 
@@ -45,7 +46,7 @@ The following environment variables can be configured:
 ## Quick Start
 
 ### Prerequisites
-- Go 1.21 or later
+- Go 1.24 or later
 - Git
 
 ### Local Development
@@ -63,7 +64,7 @@ go mod tidy
 
 3. Run the application:
 ```bash
-go run main.go
+make run
 ```
 
 4. Open your browser and navigate to `http://localhost:8080`
@@ -72,15 +73,55 @@ go run main.go
 
 1. Build the Docker image:
 ```bash
-docker build -t bitcoin-price-streamer .
+make docker-build
 ```
 
 2. Run the container:
 ```bash
-docker run -p 8080:8080 bitcoin-price-streamer
+make docker-run
 ```
 
 3. Open your browser and navigate to `http://localhost:8080`
+
+4. Clean up when done:
+```bash
+make docker-clean
+```
+
+## Testing
+
+The project includes comprehensive unit and integration tests:
+
+### Running Tests
+
+**Quick test run:**
+```bash
+make test-all
+```
+
+**Manual test commands:**
+```bash
+# Run only unit tests
+make test-unit
+
+# Run only integration tests
+make test-integration
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- **Unit Tests**: Test individual components in isolation
+  - Storage ring buffer functionality
+  - Service client management
+  - Environment variable utilities
+  - API response parsing
+
+- **Integration Tests**: Test the complete application flow
+  - End-to-end API endpoints
+  - Real-time streaming functionality
+  - Error handling scenarios
 
 ## API Usage Examples
 
@@ -128,6 +169,7 @@ The application follows a clean architecture pattern with the following componen
 - **Storage** (`internal/storage/`): In-memory storage with ring buffer
 - **Service** (`internal/service/`): Business logic for price fetching and client management
 - **Handlers** (`internal/handlers/`): HTTP request handlers for different endpoints
+- **Utils** (`internal/utils/`): Common utility functions
 
 ### Key Features
 
@@ -136,6 +178,7 @@ The application follows a clean architecture pattern with the following componen
 3. **Missed Updates Recovery**: Clients can request updates since a specific timestamp
 4. **Graceful Shutdown**: Proper cleanup of resources on application shutdown
 5. **Error Handling**: Comprehensive error handling and logging
+6. **Testing**: Extensive test coverage for reliability
 
 ## Data Structure
 
